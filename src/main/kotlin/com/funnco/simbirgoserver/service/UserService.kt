@@ -40,6 +40,9 @@ class UserService {
         return false
     }
 
+    fun getUserByHisToken(token: String): AccountEntity {
+        return getUserByHisId(jwtService.getUserIdFromToken(token))
+    }
     fun getUserByHisId(id: String): AccountEntity {
         try {
             val user = jdbcTemplate.queryForObject(
@@ -89,7 +92,23 @@ class UserService {
         }
     }
 
-    fun updateUser(userDTO: BasicUserDTO) {
-        TODO("Not yet implemented")
+    fun updateUser(userDTO: BasicUserDTO, userToken: String) {
+        val userId = jwtService.getUserIdFromToken(userToken)
+        if (!checkIfUserExists(userDTO.username)) {
+            try {
+                jdbcTemplate.update(
+                    "UPDATE public.account SET account.username = ?, account.hashed_password = ? WHERE account.id= ?",
+                    userDTO.username,
+                    jwtService.hashPassword(userDTO.password),
+                    userId
+                )
+                logger.info("Successfully finished update of user with email ${userDTO.username}")
+            } catch (e: Exception) {
+                logger.info("Error while creating user ${userDTO.username}, ${e.message}")
+                throw e
+            }
+        } else {
+            throw DuplicateKeyException("Couldn't add user with email ${userDTO.username} because it already exists")
+        }
     }
 }

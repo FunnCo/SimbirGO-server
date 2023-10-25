@@ -1,5 +1,6 @@
 package com.funnco.simbirgoserver.controller.auth
 
+import com.funnco.simbirgoserver.database.entity.AccountEntity
 import com.funnco.simbirgoserver.dto.http.BasicUserDTO
 import com.funnco.simbirgoserver.interceptor.annotation.Authorized
 import com.funnco.simbirgoserver.service.JwtService
@@ -19,10 +20,16 @@ class AccountController(
 
     private val logger = LoggerFactory.getLogger(this.javaClass.simpleName)
 
+    @Authorized
     @GetMapping("/Me")
     @ResponseStatus(HttpStatus.CREATED)
-    fun getUserInfo(){
-        println("yay")
+    @ResponseBody
+    fun getUserInfo(@RequestHeader("Authorization") token: String): AccountEntity{
+        try {
+            return userService.getUserByHisToken(token)
+        } catch (e: DuplicateKeyException){
+            throw ResponseStatusException(HttpStatus.CONFLICT, "User with such name already exists", e)
+        }
     }
 
     @PostMapping("/SignUp")
@@ -54,8 +61,8 @@ class AccountController(
     @Authorized
     @PutMapping("/Update")
     @ResponseStatus(HttpStatus.OK)
-    fun updateUser(@RequestBody basicUserDTO: BasicUserDTO){
-        userService.updateUser(basicUserDTO)
+    fun updateUser(@RequestHeader("Authorization") token: String,@RequestBody basicUserDTO: BasicUserDTO){
+        userService.updateUser(basicUserDTO, token)
     }
 
 }
